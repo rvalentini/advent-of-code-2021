@@ -10,20 +10,18 @@
 
 (defn inclusive-range
   [a b]
-  (if (< a b)
-    (range a (inc b))
-    (range b (inc a))))
-
-(defn interpolate
-  [a b c]
-  (map vector (inclusive-range a b) (repeat c)))
+  (cond
+    (= a b) (repeat a)
+    (< a b) (range a (inc b))
+    :else (range b (inc a))))
 
 (defn line->coordinates
-  [[start end]]
-  (cond
-    (= (first start) (first end)) (map reverse (interpolate (second start) (second end) (first start)))
-    (= (second start) (second end)) (interpolate (first start) (first end) (second start))
-    :else nil))
+  [[[x1 y1] [x2 y2]]]
+  (let [range-x (inclusive-range x1 x2)
+        range-y (inclusive-range y1 y2)]
+    (map vector
+      (if (< x1 x2) (reverse range-x) range-x)
+      (if (< y1 y2) (reverse range-y) range-y))))
 
 (defn frequency-reducer
   [freq-map coordinate]
