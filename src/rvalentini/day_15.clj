@@ -4,17 +4,13 @@
 
 (defn within-bounds?
   [[n m]]
-  (and (<= 0 n 99) (<= 0 m 99)))
+  (and (<= 0 n 499) (<= 0 m 499)))
 
 (defn get-neighbor-coordinates
   [n m]
   (filter within-bounds? [[(dec n) m] [(inc n) m] [n (dec m)] [n (inc m)]]))
 
 (defn not-visited? [[_ props]] (not (props :visited)))
-
-(defn update-dist [old dist] (assoc old :dist dist))
-
-(defn update-prev [old prev] (assoc old :prev prev))
 
 (defn mark-as-visited [old] (assoc old :visited true))
 
@@ -39,8 +35,8 @@
   (let [new-dist (+ (props :dist) (n-props :risk))]
     (if (< new-dist (n-props :dist))
       (-> cave-map
-        (update n-pos #(update-dist % new-dist))
-        (update n-pos #(update-prev % pos)))
+        (update n-pos #(assoc % :dist new-dist))
+        (update n-pos #(assoc % :prev pos)))
       cave-map)))
 
 (defn update-all-neighbors
@@ -49,7 +45,7 @@
 
 (defn find-safest-path
   [cave-map start-pos end-pos]
-  (loop [cave-map (update cave-map start-pos #(update-dist % 0))]
+  (loop [cave-map (update cave-map start-pos #(assoc % :dist 0))]
     (let [current (get-safest-next-pos cave-map)]
       (if (= (first current) end-pos)
         current
@@ -58,12 +54,21 @@
                    (update (first current) mark-as-visited)
                    (update-all-neighbors current neighbors))))))))
 
+(defn inc-risk [r] (if (> r 9) (- r 9) r))
+
+(defn expand-map
+  [cave-map]
+  (apply merge
+    (for [x-factor (range 0 5)
+          y-factor (range 0 5)]
+      (into {} (for [[k v] cave-map]
+                 [[(+ (first k) (* x-factor 100)) (+ (second k) (* y-factor 100))]
+                  (update v :risk #(inc-risk (+ % x-factor y-factor)))])))))
+
 (comment
   (with-open [rdr (io/reader (io/resource "day_15_input.txt"))]
     (let [input (->> (line-seq rdr)
                   (map #(s/split % #"")))
-          goal (find-safest-path (build-cave-map input) [0 0] [99 99])]
-      (println "Lowest total risk from start to end: " ((second goal) :dist))))
-
+          result (find-safest-path (expand-map (build-cave-map input)) [0 0] [499 499])]
+      (println "Lowest total risk from start to end: " ((second result) :dist))))
   )
-
